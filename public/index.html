@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mini-Jenkins Master</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #121212; color: #e0e0e0; display: flex; flex-direction: column; align-items: center; }
+        .board { display: flex; gap: 20px; width: 95%; margin-top: 20px; }
+        .col { flex: 1; background: #1e1e1e; border-radius: 12px; padding: 15px; min-height: 600px; border: 1px solid #333; }
+        .card { background: #252525; padding: 15px; margin-bottom: 15px; border-radius: 8px; border-left: 5px solid #007bff; transition: all 0.3s; }
+        .tag { font-size: 0.7em; padding: 3px 8px; border-radius: 12px; margin-right: 5px; font-weight: bold; }
+        .lang-tag { background: #007bff; color: white; }
+        .worker-tag { background: #28a745; color: white; }
+        .stage { font-size: 0.8em; margin: 5px 0; padding: 5px; border-radius: 4px; display: flex; justify-content: space-between; }
+        .pending { color: #666; }
+        .in-progress { background: rgba(255, 193, 7, 0.15); color: #ffc107; border: 1px solid #ffc107; }
+        .completed { background: rgba(40, 167, 69, 0.15); color: #28a745; border: 1px solid #28a745; }
+        h3 { color: #888; text-transform: uppercase; letter-spacing: 1px; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <h1 style="color: #007bff;">Mini-Jenkins Cluster Dashboard</h1>
+    <div class="board">
+        <div class="col" id="Queued"><h3>Pending Queue</h3></div>
+        <div class="col" id="In-Progress"><h3>Active Workers</h3></div>
+        <div class="col" id="Completed"><h3>Finished Builds</h3></div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        const socket = io(window.location.origin);
+
+        socket.on('job_updated', (job) => {
+            const oldCard = document.getElementById(`job-${job.id}`);
+            if (oldCard) oldCard.remove();
+
+            const card = document.createElement('div');
+            card.id = `job-${job.id}`;
+            card.className = 'card';
+            
+            let stagesHtml = '';
+            for (const [name, status] of Object.entries(job.stages)) {
+                stagesHtml += `<div class="stage ${status}">${name} <span>${status == 'completed' ? '✔' : status}</span></div>`;
+            }
+
+            card.innerHTML = `
+                <div style="margin-bottom:10px;">
+                    <span class="tag lang-tag">${job.lang}</span>
+                    <span class="tag worker-tag">${job.worker}</span>
+                </div>
+                <strong>${job.repo}</strong> <small style="color:#666">#${job.id}</small>
+                <div style="margin-top:10px;">${stagesHtml}</div>
+            `;
+            
+            let targetCol = "Queued";
+            if (job.status === "Completed") targetCol = "Completed";
+            else if (job.status === "In Progress") targetCol = "In-Progress";
+
+            document.getElementById(targetCol).appendChild(card);
+        });
+    </script>
+</body>
+</html>
